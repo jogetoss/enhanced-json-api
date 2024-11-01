@@ -1,6 +1,12 @@
 # Description
 
-This repository is meant to serve as a general template for how to set up new repositories in the JogetOSS organization. 
+The plugin includes bundles built from the default JSON API, with added features such as support for system proxy settings, API tokens, customizable socket timeout retries.
+- Enhanced JSON API Form Load Binder
+- Enhanced JSON API Form Options Binder
+- Enhanced JSON API Form Store Binder
+- Enhanced JSON API List Binder
+- Enhanced JSON Tool
+
 
 # Getting Help
 
