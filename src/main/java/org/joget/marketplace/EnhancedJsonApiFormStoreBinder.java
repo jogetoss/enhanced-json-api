@@ -8,7 +8,6 @@ import java.util.Map;
 
 import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.service.AppUtil;
-import org.joget.apps.app.service.JsonApiUtil;
 import org.joget.apps.form.model.Element;
 import org.joget.apps.form.model.Form;
 import org.joget.apps.form.model.FormBinder;
@@ -25,6 +24,7 @@ import org.joget.directory.model.service.DirectoryUtil;
 import org.joget.workflow.model.service.WorkflowUserManager;
 import org.joget.workflow.util.WorkflowUtil;
 import org.joget.apps.form.lib.WorkflowFormBinder;
+import org.joget.marketplace.util.JsonApiUtil;
 
 public class EnhancedJsonApiFormStoreBinder extends FormBinder implements FormStoreBinder, FormStoreElementBinder, FormStoreMultiRowElementBinder {
 

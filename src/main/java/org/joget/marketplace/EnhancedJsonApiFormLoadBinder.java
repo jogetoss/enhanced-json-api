@@ -5,7 +5,6 @@ import java.util.Map;
 
 import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.service.AppUtil;
-import org.joget.apps.app.service.JsonApiUtil;
 import org.joget.apps.form.model.Element;
 import org.joget.apps.form.model.FormBinder;
 import org.joget.apps.form.model.FormData;
@@ -15,6 +14,7 @@ import org.joget.apps.form.model.FormLoadMultiRowElementBinder;
 import org.joget.apps.form.model.FormRow;
 import org.joget.apps.form.model.FormRowSet;
 import org.joget.apps.form.service.FormUtil;
+import org.joget.marketplace.util.JsonApiUtil;
 
 public class EnhancedJsonApiFormLoadBinder extends FormBinder implements FormLoadBinder, FormLoadElementBinder, FormLoadMultiRowElementBinder {
 

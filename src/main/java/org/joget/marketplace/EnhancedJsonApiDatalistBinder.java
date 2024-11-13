@@ -25,7 +25,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.displaytag.tags.TableTagParameters;
 import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.service.AppUtil;
-import org.joget.apps.app.service.JsonApiUtil;
 import org.joget.apps.datalist.model.DataList;
 import static org.joget.apps.datalist.model.DataList.CHECKBOX_POSITION_BOTH;
 import static org.joget.apps.datalist.model.DataList.CHECKBOX_POSITION_LEFT;
@@ -41,6 +40,7 @@ import org.joget.commons.util.PagingUtils;
 import org.joget.commons.util.StringUtil;
 import org.joget.plugin.property.service.PropertyUtil;
 import org.json.JSONObject;
+import org.joget.marketplace.util.JsonApiUtil;
 
 public class EnhancedJsonApiDatalistBinder extends DataListBinderDefault {
     

@@ -7,7 +7,6 @@ import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.joget.apps.app.model.AppDefinition;
 import org.joget.apps.app.service.AppUtil;
-import org.joget.apps.app.service.JsonApiUtil;
 import org.joget.apps.form.model.Element;
 import org.joget.apps.form.model.FormAjaxOptionsBinder;
 import org.joget.apps.form.model.FormBinder;
@@ -16,7 +15,7 @@ import org.joget.apps.form.model.FormLoadOptionsBinder;
 import org.joget.apps.form.model.FormRow;
 import org.joget.apps.form.model.FormRowSet;
 import org.joget.apps.form.service.FormUtil;
-import org.joget.commons.util.SecurityUtil;
+import org.joget.marketplace.util.JsonApiUtil;
 
 public class EnhancedJsonApiFormOptionsBinder extends FormBinder implements FormLoadOptionsBinder, FormAjaxOptionsBinder {
 
