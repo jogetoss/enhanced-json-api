@@ -26,7 +26,12 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.SystemDefaultRoutePlanner;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.joget.apps.app.service.AppUtil;
+import org.joget.apps.form.model.FormRow;
+import org.joget.apps.form.model.FormRowSet;
+import org.joget.apps.form.service.FormUtil;
 import org.joget.commons.util.LogUtil;
+import org.joget.commons.util.LongTermCache;
 import org.joget.commons.util.StringUtil;
 import org.joget.workflow.model.WorkflowAssignment;
 import org.joget.workflow.util.WorkflowUtil;
@@ -34,8 +39,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class JsonApiUtil {
-    
     public static Map<String, Object> callApi(Map properties, Map<String, String> params) {
+        LongTermCache longTermCache = (LongTermCache) AppUtil.getApplicationContext().getBean("longTermCache");
         Map<String,Object> result = null;
         WorkflowAssignment wfAssignment = (WorkflowAssignment) properties.get("workflowAssignment");
         String jsonUrl = JsonApiUtil.replaceParam(properties.get("jsonUrl").toString(), params);
@@ -63,12 +68,45 @@ public class JsonApiUtil {
         LogUtil.info(JsonApiUtil.class.getName(), "Connection Timeout set to: " + connectionTimeout + " ms");
         LogUtil.info(JsonApiUtil.class.getName(), "Socket Timeout set to: " + socketTimeout + " ms");
 
-        // process the accessToken call if checked
-        String accessToken = "";
-        String accessTokenCheck = (String) properties.get("accessToken");
-        if ("true".equalsIgnoreCase(accessTokenCheck)) {
-            accessToken = new TokenApiUtil().getToken(properties);
-        }
+         // process the accessToken call if checked
+         String accessToken = "";
+         String accessTokenCheck = (String) properties.get("accessToken");
+         String accessTokenStoreCache = (String) properties.get("tokenStoreCache");
+         String accessTokenCacheExpiryTime = (String) properties.get("tokenCacheExpiryTime");
+ 
+         if ("true".equalsIgnoreCase(accessTokenCheck)) {
+            String cacheKey = properties.get("tokenUrl").toString() + properties.get("tokenFieldName").toString();
+             net.sf.ehcache.Element element = longTermCache.get(cacheKey);
+             if (element != null) {
+                 Long clearTime = longTermCache.getLastClearTime(cacheKey);
+ 
+                 if(clearTime != null){
+                     // clear cache when exceed specified time in minutes
+                     if (accessTokenCacheExpiryTime != null) {      
+                         long relativeTimeInMillis = Integer.parseInt(accessTokenCacheExpiryTime) * 60 * 1000;
+                         long currentTimeMillis = System.currentTimeMillis();
+ 
+                         if ((currentTimeMillis - clearTime) > relativeTimeInMillis) {
+                             longTermCache.remove(cacheKey);
+                         }
+                     }
+                 } else {
+                    longTermCache.remove(cacheKey);
+                 }
+             }
+ 
+             if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
+                 net.sf.ehcache.Element el = longTermCache.get(cacheKey);
+                 // get from cache, if null then get from api call
+                 if (el != null) {
+                     accessToken = el.getObjectValue().toString();
+                 } else {
+                     accessToken = new TokenApiUtil().getToken(properties);
+                 }
+             } else {
+                 accessToken = new TokenApiUtil().getToken(properties);
+             }
+         }
 
         try {
             HttpServletRequest httpRequest = WorkflowUtil.getHttpServletRequest();

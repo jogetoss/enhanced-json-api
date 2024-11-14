@@ -11,7 +11,10 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.joget.apps.app.service.AppUtil;
 import org.joget.commons.util.LogUtil;
+import org.joget.commons.util.LongTermCache;
+
 import java.net.ProxySelector;
 import java.util.HashMap;
 import org.apache.http.HttpEntity;
@@ -29,12 +32,14 @@ import org.json.JSONTokener;
 public class TokenApiUtil {
 
     public String getToken(Map properties) {
+        LongTermCache longTermCache = (LongTermCache) AppUtil.getApplicationContext().getBean("longTermCache");
         WorkflowAssignment wfAssignment = (WorkflowAssignment) properties.get("workflowAssignment");
         
         String accessToken = "";
         String tokenUrl = (String) properties.get("tokenUrl");
         String tokenRequestType = (String) properties.get("tokenRequestType");
         String tokenFieldName = (String) properties.get("tokenFieldName");
+        String accessTokenStoreCache = (String) properties.get("tokenStoreCache");
         
         CloseableHttpClient client = HttpClients.custom().setRoutePlanner(new SystemDefaultRoutePlanner(ProxySelector.getDefault())).build();
         HttpRequestBase tokenRequest = null;
@@ -83,6 +88,11 @@ public class TokenApiUtil {
                     String jsonResponse = EntityUtils.toString(response.getEntity(), "UTF-8");
                     if (jsonResponse != null && !jsonResponse.isEmpty()) {
                         accessToken = getFieldValueFromResponse(jsonResponse, tokenFieldName);
+                        // store in cache
+                        if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
+                            net.sf.ehcache.Element elStore = new net.sf.ehcache.Element(tokenUrl + tokenFieldName, accessToken);
+                            longTermCache.put(elStore);   
+                        }
                     }
                 }
             } catch (Exception ex) {
@@ -107,6 +117,11 @@ public class TokenApiUtil {
                     String jsonResponse = EntityUtils.toString(response.getEntity(), "UTF-8");
                     if (jsonResponse != null && !jsonResponse.isEmpty()) {
                         accessToken = getFieldValueFromResponse(jsonResponse, tokenFieldName);
+                        // store in cache
+                        if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
+                            net.sf.ehcache.Element elStore = new net.sf.ehcache.Element(tokenUrl + tokenFieldName, accessToken);
+                            longTermCache.put(elStore);
+                        }
                     }
                 }
             } catch (IOException ex) {

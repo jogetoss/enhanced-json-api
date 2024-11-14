@@ -50,6 +50,7 @@ import org.joget.apps.form.model.FormRowSet;
 import org.joget.apps.form.service.FileUtil;
 import org.joget.apps.form.service.FormUtil;
 import org.joget.commons.util.LogUtil;
+import org.joget.commons.util.LongTermCache;
 import org.joget.commons.util.StringUtil;
 import org.joget.commons.util.UuidGenerator;
 import org.joget.plugin.base.DefaultApplicationPlugin;
@@ -110,6 +111,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
         WorkflowAssignment wfAssignment = (WorkflowAssignment) properties.get("workflowAssignment");
         ApplicationContext ac = AppUtil.getApplicationContext();
         WorkflowManager workflowManager = (WorkflowManager) ac.getBean("workflowManager");
+        LongTermCache longTermCache = (LongTermCache) AppUtil.getApplicationContext().getBean("longTermCache");
 
         // Retrieve timeout values from plugin properties
         int connectionTimeout = 30000; // Default to 30,000 milliseconds (30 seconds)
@@ -134,8 +136,41 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
         // process the accessToken call if checked
         String accessToken = "";
         String accessTokenCheck = (String) properties.get("accessToken");
+        String accessTokenStoreCache = (String) properties.get("tokenStoreCache");
+        String accessTokenCacheExpiryTime = (String) properties.get("tokenCacheExpiryTime");
+
         if ("true".equalsIgnoreCase(accessTokenCheck)) {
-            accessToken = new TokenApiUtil().getToken(properties);
+            String cacheKey = properties.get("tokenUrl").toString() + properties.get("tokenFieldName").toString();
+            net.sf.ehcache.Element element = longTermCache.get(cacheKey);
+            if (element != null) {
+                Long clearTime = longTermCache.getLastClearTime(cacheKey);
+
+                if (clearTime != null) {
+                    // clear cache when exceed specified time in minutes
+                    if (accessTokenCacheExpiryTime != null) {
+                        long relativeTimeInMillis = Integer.parseInt(accessTokenCacheExpiryTime) * 60 * 1000;
+                        long currentTimeMillis = System.currentTimeMillis();
+
+                        if ((currentTimeMillis - clearTime) > relativeTimeInMillis) {
+                            longTermCache.remove(cacheKey);
+                        }
+                    }
+                } else {
+                    longTermCache.remove(cacheKey);
+                }
+            }
+
+            if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
+                net.sf.ehcache.Element el = longTermCache.get(cacheKey);
+                // get from cache, if null then get from api call
+                if (el != null) {
+                    accessToken = el.getObjectValue().toString();
+                } else {
+                    accessToken = new TokenApiUtil().getToken(properties);
+                }
+            } else {
+                accessToken = new TokenApiUtil().getToken(properties);
+            }
         }
 
         String jsonUrl = (String) properties.get("jsonUrl");

@@ -104,6 +104,36 @@
              "control_value":"true"
           },
           {
+            "name":"tokenStoreCache",
+            "label":"@@org.joget.marketplace.enhancedjsonapi.accessToken.storeCache@@",
+            "type":"checkbox",
+            "control_field":"accessToken",
+            "control_value":"true",
+            "options":[
+               {
+                  "value":"true",
+                  "label":""
+               }
+            ]
+          },
+          {
+            "name":"tokenCacheExpiryTime",
+            "label":"@@org.joget.marketplace.enhancedjsonapi.accessToken.cacheExpiryTime@@",
+            "type":"number",
+            "control_field":"tokenStoreCache",
+            "control_value":"true",
+            "control_use_regex":"false",
+            "regex_validation":"^[1-9]+[0-9]*$",
+            "value":"60",
+            "required":"true",
+            "options":[
+               {
+                  "value":"true",
+                  "label":""
+               }
+            ]
+          },
+          {
             "label":"@@org.joget.marketplace.enhancedjsonapi.headerRequest@@",
             "type":"header"
           },
