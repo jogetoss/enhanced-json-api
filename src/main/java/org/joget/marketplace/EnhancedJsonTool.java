@@ -566,7 +566,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
             }
 
             if (!getPropertyString("responseStatusWorkflowVariable").isEmpty()) {
-                workflowManager.activityVariable(wfAssignment.getActivityId(), getPropertyString("saveStatusToWorkflowVariable"), response.getStatusLine().getStatusCode());
+                workflowManager.activityVariable(wfAssignment.getActivityId(), getPropertyString("responseStatusWorkflowVariable"), String.valueOf(response.getStatusLine().getStatusCode()));
             }
 
             if (!getPropertyString("responseStatusFormDefId").isEmpty()) {
@@ -582,8 +582,8 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
         } catch (Exception ex) {
             LogUtil.error(getClass().getName(), ex, "");
 
-            if (!getPropertyString("saveStatusToWorkflowVariable").isEmpty()) {
-                workflowManager.activityVariable(wfAssignment.getActivityId(), getPropertyString("saveStatusToWorkflowVariable"), ex.toString());
+            if (!getPropertyString("responseStatusWorkflowVariable").isEmpty()) {
+                workflowManager.activityVariable(wfAssignment.getActivityId(), getPropertyString("responseStatusWorkflowVariable"), ex.toString());
             }
             if (!getPropertyString("responseStatusFormDefId").isEmpty()) {
                 storeStatusToForm(wfAssignment, properties, ex.toString() + " - " + ex.getMessage(), jsonResponse);
