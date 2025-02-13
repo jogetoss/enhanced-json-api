@@ -612,6 +612,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
         String idField = (String) properties.get("responseStatusIdField");
         Object[] fieldMapping = (Object[]) properties.get("responseStatusFieldMapping");
         String multirowBaseObjectName = (String) properties.get("responseStatusMultirowBaseObject");
+        Object[] fieldMappingAdditional = (Object[]) properties.get("responseStatusFieldMappingAdditional");
 
         if (formDefId != null && formDefId.trim().length() > 0) {
             ApplicationContext ac = AppUtil.getApplicationContext();
@@ -641,6 +642,11 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                 row.put(idField, appService.getOriginProcessId(wfAssignment.getProcessId()));
             } else {
                 row.setId(appService.getOriginProcessId(wfAssignment.getProcessId()));
+            }
+
+            for (Object obj : fieldMappingAdditional) {
+                Map map = (Map) obj;
+                row.put(map.get("field").toString(), map.get("value").toString());
             }
 
             row.put(statusField, status);

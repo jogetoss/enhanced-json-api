@@ -528,7 +528,25 @@
                    "label":"@@app.jsontool.jsonObjectName@@"
                 }
              ]
-          }
+          },
+          {
+            "name": "responseStatusFieldMappingAdditional",
+            "description": "@@org.joget.marketplace.enhancedjsonapi.responseStatusFieldMappingAdditional.desc@@",
+            "label": "@@org.joget.marketplace.enhancedjsonapi.responseStatusFieldMappingAdditional@@",
+            "type": "grid",
+            "columns": [
+                {
+                    "key": "field",
+                    "label": "@@app.jsontool.fieldName@@",
+                    "options_ajax_on_change": "formDefId:responseStatusFormDefId",
+                    "options_ajax": "[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
+                },
+                {
+                    "key": "value",
+                    "label": "@@app.jsontool.value@@"
+                }
+            ]
+        }
        ]
     }
  ]
