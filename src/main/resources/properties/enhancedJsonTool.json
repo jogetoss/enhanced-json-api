@@ -525,7 +525,7 @@
                 },
                 {
                    "key":"jsonObjectName",
-                   "label":"@@app.jsontool.value@@"
+                   "label":"@@app.jsontool.jsonObjectName@@"
                 }
              ]
           }
