@@ -621,7 +621,6 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
             FormRowSet rowSet = new FormRowSet();
             FormRow row = new FormRow();
 
-
             if (multirowBaseObjectName != null && multirowBaseObjectName.trim().length() > 0 && getObjectFromMap(multirowBaseObjectName, object) != null && getObjectFromMap(multirowBaseObjectName, object).getClass().isArray()) {
                 Object[] baseObjectArray = (Object[]) getObjectFromMap(multirowBaseObjectName, object);
                 if (baseObjectArray != null && baseObjectArray.length > 0) {
@@ -634,7 +633,6 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                 row = getRow(wfAssignment, null, null, fieldMapping, object);
             }
 
-
             if (!responseDataField.isEmpty()) {
                 row.put(responseDataField, jsonResponse);
             }
@@ -644,13 +642,6 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
             } else {
                 row.setId(appService.getOriginProcessId(wfAssignment.getProcessId()));
             }
-
-            // for (Object obj : fieldMapping) {
-            //     Map map = (Map) obj;
-            //     row.put(map.get("field").toString(), map.get("value").toString());
-            // }
-
-           
 
             row.put(statusField, status);
             rowSet.add(row);
