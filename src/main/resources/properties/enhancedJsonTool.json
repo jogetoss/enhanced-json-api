@@ -352,7 +352,7 @@
        "properties":[
           {
              "name":"storeAttachmentFormDefId",
-             "label":"@@app.jsontool.form@@",
+             "label":"@@app.jsontool.formId@@",
              "type":"selectbox",
              "options_ajax":"[CONTEXT_PATH]/web/json/console/app/%s/%s/forms/options",
              "description":"@@org.joget.marketplace.enhancedjsonapi.responseStatusFormDefId.desc@@"
@@ -487,6 +487,17 @@
              "control_use_regex":"true"
           },
           {
+            "name":"responseStatusStatusField",
+            "label":"@@org.joget.marketplace.enhancedjsonapi.responseStatusStatusField@@",
+            "type":"selectbox",
+            "required":"True",
+            "options_ajax_on_change":"formDefId:responseStatusFormDefId",
+            "options_ajax":"[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options",
+            "control_field":"responseStatusFormDefId",
+            "control_value":".+",
+            "control_use_regex":"true"
+         },
+          {
              "name":"responseStatusResponseDataField",
              "label":"@@org.joget.marketplace.enhancedjsonapi.responseStatusResponseDataField@@",
              "type":"selectbox",
@@ -497,16 +508,10 @@
              "control_use_regex":"true"
           },
           {
-             "name":"responseStatusStatusField",
-             "label":"@@org.joget.marketplace.enhancedjsonapi.responseStatusStatusField@@",
-             "type":"selectbox",
-             "required":"True",
-             "options_ajax_on_change":"formDefId:responseStatusFormDefId",
-             "options_ajax":"[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options",
-             "control_field":"responseStatusFormDefId",
-             "control_value":".+",
-             "control_use_regex":"true"
-          },
+            "name":"responseStatusMultirowBaseObject",
+            "label":"@@app.jsontool.baseJsonObject@@",
+            "type":"textfield"
+         },
           {
              "name":"responseStatusFieldMapping",
              "label":"@@app.jsontool.fieldMapping@@",
@@ -519,7 +524,7 @@
                    "options_ajax":"[CONTEXT_PATH]/web/json/console/app[APP_PATH]/form/columns/options"
                 },
                 {
-                   "key":"value",
+                   "key":"jsonObjectName",
                    "label":"@@app.jsontool.value@@"
                 }
              ]
