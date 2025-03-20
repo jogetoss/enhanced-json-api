@@ -10,6 +10,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.config.RequestConfig;
@@ -76,8 +77,8 @@ public class JsonApiUtil {
  
          if ("true".equalsIgnoreCase(accessTokenCheck)) {
             String cacheKey = properties.get("tokenUrl").toString() + properties.get("tokenFieldName").toString();
-             net.sf.ehcache.Element element = longTermCache.get(cacheKey);
-             if (element != null) {
+            net.sf.ehcache.Element element = longTermCache.get(cacheKey);
+            if (element != null && element.getObjectValue() != null) {
                  Long clearTime = longTermCache.getLastClearTime(cacheKey);
  
                  if(clearTime != null){
@@ -90,12 +91,12 @@ public class JsonApiUtil {
                              longTermCache.remove(cacheKey);
                          }
                      }
-                 } else {
-                    longTermCache.remove(cacheKey);
                  }
-             }
+            } else {
+                longTermCache.remove(cacheKey);
+            }
  
-             if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
+            if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
                  net.sf.ehcache.Element el = longTermCache.get(cacheKey);
                  // get from cache, if null then get from api call
                  if (el != null) {
@@ -103,10 +104,10 @@ public class JsonApiUtil {
                  } else {
                      accessToken = new TokenApiUtil().getToken(properties);
                  }
-             } else {
+            } else {
                  accessToken = new TokenApiUtil().getToken(properties);
-             }
-         }
+            }
+        }
 
         try {
             HttpServletRequest httpRequest = WorkflowUtil.getHttpServletRequest();

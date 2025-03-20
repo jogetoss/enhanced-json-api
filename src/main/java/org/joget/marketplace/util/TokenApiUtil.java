@@ -117,6 +117,10 @@ public class TokenApiUtil {
                     String jsonResponse = EntityUtils.toString(response.getEntity(), "UTF-8");
                     if (jsonResponse != null && !jsonResponse.isEmpty()) {
                         accessToken = getFieldValueFromResponse(jsonResponse, tokenFieldName);
+                        
+                        if(accessToken == null){
+                            accessToken = "";
+                        }
                         // store in cache
                         if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
                             net.sf.ehcache.Element elStore = new net.sf.ehcache.Element(tokenUrl + tokenFieldName, accessToken);

@@ -142,7 +142,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
         if ("true".equalsIgnoreCase(accessTokenCheck)) {
             String cacheKey = properties.get("tokenUrl").toString() + properties.get("tokenFieldName").toString();
             net.sf.ehcache.Element element = longTermCache.get(cacheKey);
-            if (element != null) {
+            if (element != null && element.getObjectValue() != null) {
                 Long clearTime = longTermCache.getLastClearTime(cacheKey);
 
                 if (clearTime != null) {
@@ -155,9 +155,9 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                             longTermCache.remove(cacheKey);
                         }
                     }
-                } else {
-                    longTermCache.remove(cacheKey);
                 }
+            } else {
+                longTermCache.remove(cacheKey);
             }
 
             if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
@@ -417,7 +417,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                 Map mapping = (HashMap) o;
                 String name = mapping.get("name").toString();
                 String value = mapping.get("value").toString();
-                if (name != null && !name.isEmpty() && value != null && !value.isEmpty()) {
+                if (name != null && !name.isEmpty() && value != null && !value.isEmpty() && accessToken != null) {
                     if (value != null && value.contains("{accessToken}")) {
                         value = value.replace("{accessToken}", accessToken);
                     }
@@ -431,6 +431,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
             // Connection timeout being checked when trying to connect
             LogUtil.info(getClass().getName(), "Attempting to connect to " + jsonUrl);
             long startTime = System.currentTimeMillis();
+            // execute api call
             HttpResponse response = client.execute(request);
             long connectionTime = System.currentTimeMillis() - startTime;
             LogUtil.info(getClass().getName(), "Connection established in " + connectionTime + " ms");
