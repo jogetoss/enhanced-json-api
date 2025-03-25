@@ -227,7 +227,7 @@ public class JsonApiUtil {
                 }
             }
 
-            // Cache response data based on the Cache-Control and ETag response headers
+            // Cache response data based on the Cache-Control response headers
             String cacheKeyResponse = properties.get("jsonUrl").toString() + "response";
             String cacheKeyHeaders = properties.get("jsonUrl").toString() + "headers";
             Boolean executeApi = false;
@@ -302,14 +302,11 @@ public class JsonApiUtil {
                 }
 
                 if ("true".equalsIgnoreCase(responseStoreCache)) {
-                    // Retrieve Cache-Control and ETag value
+                    // Retrieve Cache-Control
                     int statusCode = response.getStatusLine().getStatusCode();
 
                     Header cacheControlHeader = response.getFirstHeader("Cache-Control");
-                    Header etagHeader = response.getFirstHeader("ETag");
-
                     String cacheControl = (cacheControlHeader != null) ? cacheControlHeader.getValue() : null;
-                    // String etag = (etagHeader != null) ? etagHeader.getValue() : null;
 
                     // cache-control attributes
                     boolean noStore = false;
