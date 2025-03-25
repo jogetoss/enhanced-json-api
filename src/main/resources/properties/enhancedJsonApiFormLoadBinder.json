@@ -246,7 +246,19 @@
           },
           {
             "label":"@@org.joget.marketplace.enhancedjsonapi.headerResponse@@",
-            "type":"header"
+            "type":"header",
+            "description":"@@org.joget.marketplace.enhancedjsonapi.cacheResponse.desc@@"
+          },
+          {
+            "name":"responseStoreCache",
+            "label":"@@org.joget.marketplace.enhancedjsonapi.responseStoreCache@@",
+            "type":"checkbox",
+            "options":[
+               {
+                  "value":"true",
+                  "label":""
+               }
+            ]
           },
           {
              "name":"multirowBaseObject",

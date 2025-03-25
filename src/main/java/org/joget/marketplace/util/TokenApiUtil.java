@@ -92,6 +92,8 @@ public class TokenApiUtil {
                         if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
                             net.sf.ehcache.Element elStore = new net.sf.ehcache.Element(tokenUrl + tokenFieldName, accessToken);
                             longTermCache.put(elStore);   
+                            longTermCache.remove(tokenUrl + tokenFieldName);   
+                            longTermCache.put(elStore);   
                         }
                     }
                 }

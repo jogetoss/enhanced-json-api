@@ -428,24 +428,129 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                 }
             }
 
-            // Connection timeout being checked when trying to connect
-            LogUtil.info(getClass().getName(), "Attempting to connect to " + jsonUrl);
-            long startTime = System.currentTimeMillis();
-            // execute api call
-            HttpResponse response = client.execute(request);
-            long connectionTime = System.currentTimeMillis() - startTime;
-            LogUtil.info(getClass().getName(), "Connection established in " + connectionTime + " ms");
-
-            if ("true".equalsIgnoreCase(getPropertyString("debugMode"))) {
-                LogUtil.info(EnhancedJsonTool.class.getName(), jsonUrl + " returned with status : " + response.getStatusLine().getStatusCode());
-            }
-
             String responseType = getPropertyString("responseType");
-            jsonResponse = EntityUtils.toString(response.getEntity(), "UTF-8");
+            HttpResponse response = executeApiCall(responseType, jsonUrl, client, request);
 
             if (!responseType.isEmpty()) {
 
                 if (responseType.equalsIgnoreCase("JSON")) {
+                    // Cache response data based on the Cache-Control and ETag response headers
+                    String cacheKeyResponse = properties.get("jsonUrl").toString() + "response";
+                    String cacheKeyHeaders = properties.get("jsonUrl").toString() + "headers";
+                    Boolean executeApi = false;
+
+                    if ("true".equalsIgnoreCase(getPropertyString("responseStoreCache"))) {
+                        // based on cache-control, remove cache when reach expiry time
+                        net.sf.ehcache.Element element = longTermCache.get(cacheKeyHeaders);
+                        if (element != null && element.getObjectValue() != null) {
+                            Long clearTime = longTermCache.getLastClearTime(cacheKeyHeaders);
+                            int maxAge = 0;
+                            String cacheControl = "";
+
+                            // retrieve max-age from cache, if no value, default is 86400 (seconds)
+                            for (String line : element.getObjectValue().toString().split("\n")) {
+                                if (line.startsWith("Cache-Control:")) {
+                                    cacheControl = line.substring(14).trim();
+                                }
+                            }
+                            if (cacheControl != null && cacheControl != "") {
+                                for (String directive : cacheControl.split(",")) {
+                                    directive = directive.trim();
+                                    if (directive.startsWith("max-age=")) {
+                                        maxAge = Integer.parseInt(directive.split("=")[1]);
+                                    }
+                                }
+                            } else {
+                                maxAge = 86400;
+                            }
+
+                            if (clearTime != null) {
+                                // clear cache when exceed max-age
+                                if (maxAge != 0) {
+                                    long relativeTimeInMillis = maxAge * 1000;
+                                    long currentTimeMillis = System.currentTimeMillis();
+
+                                    if ((currentTimeMillis - clearTime) > relativeTimeInMillis) {
+                                        longTermCache.remove(cacheKeyHeaders);
+                                        longTermCache.remove(cacheKeyResponse);
+                                    }
+                                }
+                            }
+                        } else {
+                            longTermCache.remove(cacheKeyHeaders);
+                            longTermCache.remove(cacheKeyResponse);
+                        }
+
+                        net.sf.ehcache.Element el = longTermCache.get(cacheKeyResponse);
+                        // get from cache, if null then get from api call
+                        if (el != null) {
+                            jsonResponse = el.getObjectValue().toString();
+                        } else {
+                            executeApi = true;
+                        }
+                    } else {
+                            executeApi = true;
+                    }
+
+                    // execute api call
+                    if(executeApi){
+                         // Connection timeout being checked when trying to connect
+                        LogUtil.info(getClass().getName(), "Attempting to connect to " + jsonUrl);
+                        long startTime = System.currentTimeMillis();
+                        // execute api call
+                        response = client.execute(request);
+                        long connectionTime = System.currentTimeMillis() - startTime;
+                        LogUtil.info(getClass().getName(), "Connection established in " + connectionTime + " ms");
+        
+                        if ("true".equalsIgnoreCase(getPropertyString("debugMode"))) {
+                            LogUtil.info(EnhancedJsonTool.class.getName(), jsonUrl + " returned with status : " + response.getStatusLine().getStatusCode());
+                        }   
+                    
+                        if ("true".equalsIgnoreCase(getPropertyString("responseStoreCache"))) {
+                            // Retrieve Cache-Control and ETag value
+                            int statusCode = response.getStatusLine().getStatusCode();
+                            
+                            Header cacheControlHeader = response.getFirstHeader("Cache-Control");
+                            Header etagHeader = response.getFirstHeader("ETag");
+                
+                            String cacheControl = (cacheControlHeader != null) ? cacheControlHeader.getValue() : null;
+                            // String etag = (etagHeader != null) ? etagHeader.getValue() : null;
+                
+                            // cache-control attributes
+                            boolean noStore = false;
+                            if (cacheControl != null && cacheControl != "") {
+                                for (String directive : cacheControl.split(",")) {
+                                    directive = directive.trim();
+                                    if (directive.equals("no-store")) {
+                                        noStore = true;
+                                    }
+                                }
+                            }
+
+                            // store response and headers in cache
+                            if (!noStore){
+                                // store headers
+                                StringBuilder headersString = new StringBuilder();
+                                for (Header header : response.getAllHeaders()) {
+                                    headersString.append(header.getName()).append(": ").append(header.getValue()).append("\n");
+                                }
+                                String allHeaders = headersString.toString();
+                                net.sf.ehcache.Element eleHeaders = new net.sf.ehcache.Element(cacheKeyHeaders, allHeaders);
+                                longTermCache.put(eleHeaders);
+                                longTermCache.remove(cacheKeyHeaders);
+                                longTermCache.put(eleHeaders);
+
+                                // store response
+                                jsonResponse = EntityUtils.toString(response.getEntity());
+                                net.sf.ehcache.Element eleResponse = new net.sf.ehcache.Element(cacheKeyResponse, jsonResponse);
+                                longTermCache.put(eleResponse);
+                                longTermCache.remove(cacheKeyResponse);
+                                longTermCache.put(eleResponse);
+                            }
+                        } else {
+                            jsonResponse = EntityUtils.toString(response.getEntity());
+                        }
+                    }
                     //if(response.getEntity().getContentType().getValue().equalsIgnoreCase("application/json")){
                    
                     String jsonResponseFormatted = jsonResponse;
@@ -533,10 +638,13 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                         recordId = UuidGenerator.getInstance().getUuid();
                         row = new FormRow();
                         row.put(fileUploadID, fileName);
-                    } else {
+                    } 
+                    else {
                         rowSet = appService.loadFormData(appDef.getAppId(), appDef.getVersion().toString(), formDefId, recordId);
-                        row = rowSet.get(0);
-                        rowSet.remove(0);
+                        if(row.size() != 0){
+                            row = rowSet.get(0);
+                            rowSet.remove(0);
+                        }
                     }
                     row.put(fileUploadID, fileName);
                     rowSet.add(0, row);
@@ -847,5 +955,32 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
         }
 
         return String.join(";", values);
+    }
+
+    protected HttpResponse executeApiCall(String responseType, String jsonUrl, CloseableHttpClient client, HttpRequestBase request){
+        try{
+            if (!responseType.isEmpty()) {
+
+                if (!responseType.equalsIgnoreCase("JSON")) {
+        
+                    // Connection timeout being checked when trying to connect
+                    LogUtil.info(getClass().getName(), "Attempting to connect to " + jsonUrl);
+                    long startTime = System.currentTimeMillis();
+                    // execute api call
+                    HttpResponse response = client.execute(request);
+                    long connectionTime = System.currentTimeMillis() - startTime;
+                    LogUtil.info(getClass().getName(), "Connection established in " + connectionTime + " ms");
+    
+                    if ("true".equalsIgnoreCase(getPropertyString("debugMode"))) {
+                        LogUtil.info(EnhancedJsonTool.class.getName(), jsonUrl + " returned with status : " + response.getStatusLine().getStatusCode());
+                    }   
+                    return response;
+                }
+                return null;
+            }
+        } catch (Exception ex){
+            return null;
+        }
+        return null;
     }
 }

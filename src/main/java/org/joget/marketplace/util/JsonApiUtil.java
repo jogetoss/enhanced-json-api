@@ -34,6 +34,7 @@ import org.joget.apps.form.service.FormUtil;
 import org.joget.commons.util.LogUtil;
 import org.joget.commons.util.LongTermCache;
 import org.joget.commons.util.StringUtil;
+import org.joget.marketplace.EnhancedJsonTool;
 import org.joget.workflow.model.WorkflowAssignment;
 import org.joget.workflow.util.WorkflowUtil;
 import org.json.JSONArray;
@@ -226,18 +227,127 @@ public class JsonApiUtil {
                 }
             }
 
-            // Connection timeout being checked when trying to connect
-            LogUtil.info(JsonApiUtil.class.getName(), "Attempting to connect to " + jsonUrl);
-            long startTime = System.currentTimeMillis();
-            HttpResponse response = client.execute(request);
-            long connectionTime = System.currentTimeMillis() - startTime;
-            LogUtil.info(JsonApiUtil.class.getName(), "Connection established in " + connectionTime + " ms");
+            // Cache response data based on the Cache-Control and ETag response headers
+            String cacheKeyResponse = properties.get("jsonUrl").toString() + "response";
+            String cacheKeyHeaders = properties.get("jsonUrl").toString() + "headers";
+            Boolean executeApi = false;
+            String responseStoreCache = (String) properties.get("responseStoreCache");
+            String jsonResponse = "";
 
-            if ("true".equalsIgnoreCase(properties.get("debugMode").toString())) {
-                LogUtil.info(JsonApiUtil.class.getName(), jsonUrl + " returned with status : " + response.getStatusLine().getStatusCode());
+            if ("true".equalsIgnoreCase(responseStoreCache)) {
+                // based on cache-control, remove cache when reach expiry time
+                net.sf.ehcache.Element element = longTermCache.get(cacheKeyHeaders);
+                if (element != null && element.getObjectValue() != null) {
+                    Long clearTime = longTermCache.getLastClearTime(cacheKeyHeaders);
+                    int maxAge = 0;
+                    String cacheControl = "";
+
+                    // retrieve max-age from cache, if no value, default is 86400 (seconds)
+                    for (String line : element.getObjectValue().toString().split("\n")) {
+                        if (line.startsWith("Cache-Control:")) {
+                            cacheControl = line.substring(14).trim();
+                        }
+                    }
+                    if (cacheControl != null && cacheControl != "") {
+                        for (String directive : cacheControl.split(",")) {
+                            directive = directive.trim();
+                            if (directive.startsWith("max-age=")) {
+                                maxAge = Integer.parseInt(directive.split("=")[1]);
+                            }
+                        }
+                    } else {
+                        maxAge = 86400;
+                    }
+
+                    if (clearTime != null) {
+                        // clear cache when exceed max-age
+                        if (maxAge != 0) {
+                            long relativeTimeInMillis = maxAge * 1000;
+                            long currentTimeMillis = System.currentTimeMillis();
+
+                            if ((currentTimeMillis - clearTime) > relativeTimeInMillis) {
+                                longTermCache.remove(cacheKeyHeaders);
+                                longTermCache.remove(cacheKeyResponse);
+                            }
+                        }
+                    }
+                } else {
+                    longTermCache.remove(cacheKeyHeaders);
+                    longTermCache.remove(cacheKeyResponse);
+                }
+
+                net.sf.ehcache.Element el = longTermCache.get(cacheKeyResponse);
+                // get from cache, if null then get from api call
+                if (el != null) {
+                    jsonResponse = el.getObjectValue().toString();
+                } else {
+                    executeApi = true;
+                }
+            } else {
+                executeApi = true;
             }
 
-            String jsonResponse = EntityUtils.toString(response.getEntity(), "UTF-8");
+            // execute api call
+            if (executeApi) {
+                // Connection timeout being checked when trying to connect
+                LogUtil.info(JsonApiUtil.class.getName(), "Attempting to connect to " + jsonUrl);
+                long startTime = System.currentTimeMillis();
+                // execute api call
+                HttpResponse response = client.execute(request);
+                long connectionTime = System.currentTimeMillis() - startTime;
+                LogUtil.info(JsonApiUtil.class.getName(), "Connection established in " + connectionTime + " ms");
+
+                if ("true".equalsIgnoreCase(properties.get("debugMode").toString())) {
+                    LogUtil.info(JsonApiUtil.class.getName(), jsonUrl + " returned with status : " + response.getStatusLine().getStatusCode());
+                }
+
+                if ("true".equalsIgnoreCase(responseStoreCache)) {
+                    // Retrieve Cache-Control and ETag value
+                    int statusCode = response.getStatusLine().getStatusCode();
+
+                    Header cacheControlHeader = response.getFirstHeader("Cache-Control");
+                    Header etagHeader = response.getFirstHeader("ETag");
+
+                    String cacheControl = (cacheControlHeader != null) ? cacheControlHeader.getValue() : null;
+                    // String etag = (etagHeader != null) ? etagHeader.getValue() : null;
+
+                    // cache-control attributes
+                    boolean noStore = false;
+                    if (cacheControl != null && cacheControl != "") {
+                        for (String directive : cacheControl.split(",")) {
+                            directive = directive.trim();
+                            if (directive.equals("no-store")) {
+                                noStore = true;
+                            }
+                        }
+                    }
+
+                    // store response and headers in cache
+                    if (!noStore) {
+                        // store headers
+                        StringBuilder headersString = new StringBuilder();
+                        for (Header header : response.getAllHeaders()) {
+                            headersString.append(header.getName()).append(": ").append(header.getValue()).append("\n");
+                        }
+                        String allHeaders = headersString.toString();
+                        net.sf.ehcache.Element eleHeaders = new net.sf.ehcache.Element(cacheKeyHeaders, allHeaders);
+                        longTermCache.put(eleHeaders);
+                        longTermCache.remove(cacheKeyHeaders);
+                        longTermCache.put(eleHeaders);
+
+                        // store response
+                        jsonResponse = EntityUtils.toString(response.getEntity());
+                        net.sf.ehcache.Element eleResponse = new net.sf.ehcache.Element(cacheKeyResponse, jsonResponse);
+                        longTermCache.put(eleResponse);
+                        longTermCache.remove(cacheKeyResponse);
+                        longTermCache.put(eleResponse);
+                    }
+                } else {
+                    jsonResponse = EntityUtils.toString(response.getEntity());
+                }
+            }
+
+            // String jsonResponse = EntityUtils.toString(response.getEntity(), "UTF-8");
             if (jsonResponse != null && !jsonResponse.isEmpty()) {
                 jsonResponse = jsonResponse.trim();
                 if (jsonResponse.startsWith("[") && jsonResponse.endsWith("]")) {
