@@ -638,7 +638,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                     } 
                     else {
                         rowSet = appService.loadFormData(appDef.getAppId(), appDef.getVersion().toString(), formDefId, recordId);
-                        if(row.size() != 0){
+                        if(rowSet.size() != 0){
                             row = rowSet.get(0);
                             rowSet.remove(0);
                         }
@@ -650,7 +650,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
 
                     //save actual file into wflow folder
                     String tableName = appService.getFormTableName(appDef, formDefId);
-                    String filePath = FileUtil.getUploadPath(tableName, wfAssignment.getProcessId());
+                    String filePath = FileUtil.getUploadPath(tableName, recordId);
 
                     File file = new File(filePath);
                     file.mkdirs();
