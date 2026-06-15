@@ -65,6 +65,7 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ConnectTimeoutException;
 import java.net.SocketTimeoutException;
 import org.apache.http.impl.conn.SystemDefaultRoutePlanner;
+import org.joget.apps.app.service.AppPluginUtil;
 import org.joget.marketplace.util.TokenApiUtil;
 
 public class EnhancedJsonTool extends DefaultApplicationPlugin {
@@ -926,6 +927,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
     protected Object executeScript(String script, Map properties) {
         Object result = null;
         try {
+            /*
             Interpreter interpreter = new Interpreter();
             interpreter.setClassLoader(getClass().getClassLoader());
             for (Object key : properties.keySet()) {
@@ -933,6 +935,8 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
             }
             LogUtil.debug(getClass().getName(), "Executing script " + script);
             result = interpreter.eval(script);
+            */
+            result = AppPluginUtil.executeScript(script, properties);
             return result;
         } catch (Exception e) {
             LogUtil.error(getClass().getName(), e, "Error executing script");
