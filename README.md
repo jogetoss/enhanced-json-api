@@ -7,6 +7,7 @@ The plugin includes bundles built from the default JSON API, with added features
 - Enhanced JSON API List Binder
 - Enhanced JSON Tool
 
+Documentation is available at [Enhanced JSON API](https://kb.joget.org/jw/web/userview/jdocs/docs/marketplace/enhanced-json-api).
 
 # Getting Help
 
