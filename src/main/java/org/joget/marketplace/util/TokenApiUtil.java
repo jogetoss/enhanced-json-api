@@ -12,6 +12,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.joget.apps.app.service.AppUtil;
+import org.joget.commons.util.DynamicDataSourceManager;
 import org.joget.commons.util.LogUtil;
 import org.joget.commons.util.LongTermCache;
 
@@ -30,6 +31,11 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 public class TokenApiUtil {
+
+    // profile-first prefix so LongTermCache accepts the key for tenant profiles
+    public static String ltKey(String rawKey) {
+        return DynamicDataSourceManager.getCurrentProfile() + "_" + rawKey;
+    }
 
     public String getToken(Map properties) {
         LongTermCache longTermCache = (LongTermCache) AppUtil.getApplicationContext().getBean("longTermCache");
@@ -90,9 +96,7 @@ public class TokenApiUtil {
                         accessToken = getFieldValueFromResponse(jsonResponse, tokenFieldName);
                         // store in cache
                         if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
-                            net.sf.ehcache.Element elStore = new net.sf.ehcache.Element(tokenUrl + tokenFieldName, accessToken);
-                            longTermCache.put(elStore);   
-                            longTermCache.remove(tokenUrl + tokenFieldName);   
+                            net.sf.ehcache.Element elStore = new net.sf.ehcache.Element(ltKey(tokenUrl + tokenFieldName), accessToken);
                             longTermCache.put(elStore);   
                         }
                     }
@@ -125,7 +129,7 @@ public class TokenApiUtil {
                         }
                         // store in cache
                         if ("true".equalsIgnoreCase(accessTokenStoreCache)) {
-                            net.sf.ehcache.Element elStore = new net.sf.ehcache.Element(tokenUrl + tokenFieldName, accessToken);
+                            net.sf.ehcache.Element elStore = new net.sf.ehcache.Element(ltKey(tokenUrl + tokenFieldName), accessToken);
                             longTermCache.put(elStore);
                         }
                     }

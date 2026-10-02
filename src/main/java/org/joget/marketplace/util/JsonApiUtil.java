@@ -76,8 +76,11 @@ public class JsonApiUtil {
          String accessTokenStoreCache = (String) properties.get("tokenStoreCache");
          String accessTokenCacheExpiryTime = (String) properties.get("tokenCacheExpiryTime");
  
-         if ("true".equalsIgnoreCase(accessTokenCheck)) {
-            String cacheKey = properties.get("tokenUrl").toString() + properties.get("tokenFieldName").toString();
+         // skip the cache entirely when token caching is off
+         if ("true".equalsIgnoreCase(accessTokenCheck) && !"true".equalsIgnoreCase(accessTokenStoreCache)) {
+             accessToken = new TokenApiUtil().getToken(properties);
+         } else if ("true".equalsIgnoreCase(accessTokenCheck)) {
+            String cacheKey = TokenApiUtil.ltKey(properties.get("tokenUrl").toString() + properties.get("tokenFieldName").toString());
             net.sf.ehcache.Element element = longTermCache.get(cacheKey);
             if (element != null && element.getObjectValue() != null) {
                  Long clearTime = longTermCache.getLastClearTime(cacheKey);
@@ -228,8 +231,8 @@ public class JsonApiUtil {
             }
 
             // Cache response data based on the Cache-Control response headers
-            String cacheKeyResponse = properties.get("jsonUrl").toString() + "response";
-            String cacheKeyHeaders = properties.get("jsonUrl").toString() + "headers";
+            String cacheKeyResponse = TokenApiUtil.ltKey(properties.get("jsonUrl").toString() + "response");
+            String cacheKeyHeaders = TokenApiUtil.ltKey(properties.get("jsonUrl").toString() + "headers");
             Boolean executeApi = false;
             String responseStoreCache = (String) properties.get("responseStoreCache");
             String jsonResponse = "";
@@ -329,14 +332,10 @@ public class JsonApiUtil {
                         String allHeaders = headersString.toString();
                         net.sf.ehcache.Element eleHeaders = new net.sf.ehcache.Element(cacheKeyHeaders, allHeaders);
                         longTermCache.put(eleHeaders);
-                        longTermCache.remove(cacheKeyHeaders);
-                        longTermCache.put(eleHeaders);
 
                         // store response
                         jsonResponse = EntityUtils.toString(response.getEntity());
                         net.sf.ehcache.Element eleResponse = new net.sf.ehcache.Element(cacheKeyResponse, jsonResponse);
-                        longTermCache.put(eleResponse);
-                        longTermCache.remove(cacheKeyResponse);
                         longTermCache.put(eleResponse);
                     }
                 } else {
