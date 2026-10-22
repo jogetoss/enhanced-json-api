@@ -434,6 +434,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
 
             String responseType = getPropertyString("responseType");
             HttpResponse response = executeApiCall(responseType, jsonUrl, client, request);
+            String responseStatus = (response != null) ? String.valueOf(response.getStatusLine().getStatusCode()) : "";
 
             if (!responseType.isEmpty()) {
 
@@ -441,6 +442,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                     // Cache response data based on the Cache-Control response headers
                     String cacheKeyResponse = TokenApiUtil.ltKey(properties.get("jsonUrl").toString() + "response");
                     String cacheKeyHeaders = TokenApiUtil.ltKey(properties.get("jsonUrl").toString() + "headers");
+                    String cacheKeyStatus = TokenApiUtil.ltKey(properties.get("jsonUrl").toString() + "status");
                     Boolean executeApi = false;
 
                     if ("true".equalsIgnoreCase(getPropertyString("responseStoreCache"))) {
@@ -477,18 +479,22 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                                     if ((currentTimeMillis - clearTime) > relativeTimeInMillis) {
                                         longTermCache.remove(cacheKeyHeaders);
                                         longTermCache.remove(cacheKeyResponse);
+                                        longTermCache.remove(cacheKeyStatus);
                                     }
                                 }
                             }
                         } else {
                             longTermCache.remove(cacheKeyHeaders);
                             longTermCache.remove(cacheKeyResponse);
+                            longTermCache.remove(cacheKeyStatus);
                         }
 
                         net.sf.ehcache.Element el = longTermCache.get(cacheKeyResponse);
-                        // get from cache, if null then get from api call
-                        if (el != null) {
+                        net.sf.ehcache.Element elStatus = longTermCache.get(cacheKeyStatus);
+                        // get from cache, if null or cached without status then get from api call
+                        if (el != null && elStatus != null && elStatus.getObjectValue() != null) {
                             jsonResponse = el.getObjectValue().toString();
+                            responseStatus = elStatus.getObjectValue().toString();
                         } else {
                             executeApi = true;
                         }
@@ -503,6 +509,7 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                         long startTime = System.currentTimeMillis();
                         // execute api call
                         response = client.execute(request);
+                        responseStatus = String.valueOf(response.getStatusLine().getStatusCode());
                         long connectionTime = System.currentTimeMillis() - startTime;
                         LogUtil.info(getClass().getName(), "Connection established in " + connectionTime + " ms");
         
@@ -512,8 +519,6 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                     
                         if ("true".equalsIgnoreCase(getPropertyString("responseStoreCache"))) {
                             // Retrieve Cache-Control
-                            int statusCode = response.getStatusLine().getStatusCode();
-                            
                             Header cacheControlHeader = response.getFirstHeader("Cache-Control");
                             String cacheControl = (cacheControlHeader != null) ? cacheControlHeader.getValue() : null;
                 
@@ -543,6 +548,10 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
                                 jsonResponse = EntityUtils.toString(response.getEntity());
                                 net.sf.ehcache.Element eleResponse = new net.sf.ehcache.Element(cacheKeyResponse, jsonResponse);
                                 longTermCache.put(eleResponse);
+
+                                // store status code
+                                net.sf.ehcache.Element eleStatus = new net.sf.ehcache.Element(cacheKeyStatus, responseStatus);
+                                longTermCache.put(eleStatus);
                             }
                         } else {
                             jsonResponse = EntityUtils.toString(response.getEntity());
@@ -673,11 +682,11 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
             }
 
             if (!getPropertyString("responseStatusWorkflowVariable").isEmpty()) {
-                workflowManager.activityVariable(wfAssignment.getActivityId(), getPropertyString("responseStatusWorkflowVariable"), String.valueOf(response.getStatusLine().getStatusCode()));
+                workflowManager.activityVariable(wfAssignment.getActivityId(), getPropertyString("responseStatusWorkflowVariable"), responseStatus);
             }
 
             if (!getPropertyString("responseStatusFormDefId").isEmpty()) {
-                storeStatusToForm(wfAssignment, properties, String.valueOf(response.getStatusLine().getStatusCode()), jsonResponse, jsonResponseObject);
+                storeStatusToForm(wfAssignment, properties, responseStatus, jsonResponse, jsonResponseObject);
             }
 
             return jsonResponseObjectRaw;
@@ -959,27 +968,24 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
 
     protected HttpResponse executeApiCall(String responseType, String jsonUrl, CloseableHttpClient client, HttpRequestBase request){
         try{
-            if (!responseType.isEmpty()) {
+            // JSON executes its own call in executeTool to support response caching
+            if (!responseType.equalsIgnoreCase("JSON")) {
 
-                if (!responseType.equalsIgnoreCase("JSON")) {
-        
-                    // Connection timeout being checked when trying to connect
-                    LogUtil.info(getClass().getName(), "Attempting to connect to " + jsonUrl);
-                    long startTime = System.currentTimeMillis();
-                    // execute api call
-                    HttpResponse response = client.execute(request);
-                    long connectionTime = System.currentTimeMillis() - startTime;
-                    LogUtil.info(getClass().getName(), "Connection established in " + connectionTime + " ms");
-    
-                    if ("true".equalsIgnoreCase(getPropertyString("debugMode"))) {
-                        LogUtil.info(EnhancedJsonTool.class.getName(), jsonUrl + " returned with status : " + response.getStatusLine().getStatusCode());
-                    }   
-                    return response;
+                // Connection timeout being checked when trying to connect
+                LogUtil.info(getClass().getName(), "Attempting to connect to " + jsonUrl);
+                long startTime = System.currentTimeMillis();
+                // execute api call
+                HttpResponse response = client.execute(request);
+                long connectionTime = System.currentTimeMillis() - startTime;
+                LogUtil.info(getClass().getName(), "Connection established in " + connectionTime + " ms");
+
+                if ("true".equalsIgnoreCase(getPropertyString("debugMode"))) {
+                    LogUtil.info(EnhancedJsonTool.class.getName(), jsonUrl + " returned with status : " + response.getStatusLine().getStatusCode());
                 }
-                return null;
+                return response;
             }
         } catch (Exception ex){
-            return null;
+            LogUtil.error(getClass().getName(), ex, "Error executing API call to " + jsonUrl);
         }
         return null;
     }

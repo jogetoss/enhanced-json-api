@@ -8,7 +8,7 @@ import org.osgi.framework.ServiceRegistration;
 
 public class Activator implements BundleActivator {
 
-    public static final String VERSION = "9.1.0";
+    public static final String VERSION = "9.1.1";
 
     protected Collection<ServiceRegistration> registrationList;
 
