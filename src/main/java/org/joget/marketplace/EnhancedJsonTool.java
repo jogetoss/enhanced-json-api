@@ -691,12 +691,14 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
 
             return jsonResponseObjectRaw;
 
-        } catch (ConnectTimeoutException e) {
-            LogUtil.error(getClass().getName(), e, "Connection timed out while attempting to connect to " + jsonUrl);
-        } catch (SocketTimeoutException e) {
-            LogUtil.error(getClass().getName(), e, "Socket timed out while waiting for data from " + jsonUrl);
         } catch (Exception ex) {
-            LogUtil.error(getClass().getName(), ex, "");
+            if (ex instanceof ConnectTimeoutException) {
+                LogUtil.error(getClass().getName(), ex, "Connection timed out while attempting to connect to " + jsonUrl);
+            } else if (ex instanceof SocketTimeoutException) {
+                LogUtil.error(getClass().getName(), ex, "Socket timed out while waiting for data from " + jsonUrl);
+            } else {
+                LogUtil.error(getClass().getName(), ex, "Error executing API call to " + jsonUrl);
+            }
 
             if (!getPropertyString("responseStatusWorkflowVariable").isEmpty()) {
                 workflowManager.activityVariable(wfAssignment.getActivityId(), getPropertyString("responseStatusWorkflowVariable"), ex.toString());
@@ -728,6 +730,16 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
         Object[] fieldMapping = (Object[]) properties.get("responseStatusFieldMapping");
         String multirowBaseObjectName = (String) properties.get("responseStatusMultirowBaseObject");
         Object[] fieldMappingAdditional = (Object[]) properties.get("responseStatusFieldMappingAdditional");
+
+        if (object == null) {
+            object = new HashMap();
+        }
+        if (fieldMapping == null) {
+            fieldMapping = new Object[0];
+        }
+        if (fieldMappingAdditional == null) {
+            fieldMappingAdditional = new Object[0];
+        }
 
         if (formDefId != null && formDefId.trim().length() > 0) {
             ApplicationContext ac = AppUtil.getApplicationContext();
@@ -966,26 +978,23 @@ public class EnhancedJsonTool extends DefaultApplicationPlugin {
         return String.join(";", values);
     }
 
-    protected HttpResponse executeApiCall(String responseType, String jsonUrl, CloseableHttpClient client, HttpRequestBase request){
-        try{
-            // JSON executes its own call in executeTool to support response caching
-            if (!responseType.equalsIgnoreCase("JSON")) {
+    protected HttpResponse executeApiCall(String responseType, String jsonUrl, CloseableHttpClient client, HttpRequestBase request) throws IOException {
+        // exceptions propagate to execute(), which stores them via the Store Response Status settings
+        // JSON executes its own call in executeTool to support response caching
+        if (!responseType.equalsIgnoreCase("JSON")) {
 
-                // Connection timeout being checked when trying to connect
-                LogUtil.info(getClass().getName(), "Attempting to connect to " + jsonUrl);
-                long startTime = System.currentTimeMillis();
-                // execute api call
-                HttpResponse response = client.execute(request);
-                long connectionTime = System.currentTimeMillis() - startTime;
-                LogUtil.info(getClass().getName(), "Connection established in " + connectionTime + " ms");
+            // Connection timeout being checked when trying to connect
+            LogUtil.info(getClass().getName(), "Attempting to connect to " + jsonUrl);
+            long startTime = System.currentTimeMillis();
+            // execute api call
+            HttpResponse response = client.execute(request);
+            long connectionTime = System.currentTimeMillis() - startTime;
+            LogUtil.info(getClass().getName(), "Connection established in " + connectionTime + " ms");
 
-                if ("true".equalsIgnoreCase(getPropertyString("debugMode"))) {
-                    LogUtil.info(EnhancedJsonTool.class.getName(), jsonUrl + " returned with status : " + response.getStatusLine().getStatusCode());
-                }
-                return response;
+            if ("true".equalsIgnoreCase(getPropertyString("debugMode"))) {
+                LogUtil.info(EnhancedJsonTool.class.getName(), jsonUrl + " returned with status : " + response.getStatusLine().getStatusCode());
             }
-        } catch (Exception ex){
-            LogUtil.error(getClass().getName(), ex, "Error executing API call to " + jsonUrl);
+            return response;
         }
         return null;
     }
